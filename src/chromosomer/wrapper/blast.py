@@ -5,6 +5,7 @@
 # gaik (dot) tamazian (at) gmail (dot) com
 
 import logging
+import shutil
 import subprocess
 from itertools import chain
 
@@ -28,6 +29,8 @@ class MakeBlastDb(object):
         :type fasta: str
         :type out_name: str
         """
+        if shutil.which("makeblastdb") is None:
+            raise Exception("BLAST installation not found")
         self.__fasta = fasta
         self.__out_name = out_name
 
@@ -35,11 +38,10 @@ class MakeBlastDb(object):
         """
         Launch makeblastn with the specified parameters.
         """
-        options = ['makeblastdb', '-in', self.__fasta, '-dbtype',
-                   'nucl']
+        options = ["makeblastdb", "-in", self.__fasta, "-dbtype", "nucl"]
 
         if self.__out_name is not None:
-            options += ['-out', self.__out_name]
+            options += ["-out", self.__out_name]
 
         subprocess.check_call(options)
 
@@ -62,6 +64,8 @@ class BlastN(object):
         :type query: str
         :type database: str
         """
+        if shutil.which("blastn") is None:
+            raise Exception("BLAST installation not found")
         self.__query = query
         self.__database = database
         self.__output = output
@@ -92,9 +96,14 @@ class BlastN(object):
         """
         Launch blastn with the specified parameters.
         """
-        options = ['blastn', '-query', self.__query, '-db',
-                   self.__database, '-out', self.__output] + \
-            map(str, list(chain.from_iterable(
-                self.__parameters.iteritems())))
+        options = [
+            "blastn",
+            "-query",
+            self.__query,
+            "-db",
+            self.__database,
+            "-out",
+            self.__output,
+        ] + [str(x) for x in chain.from_iterable(self.__parameters.items())]
 
         subprocess.check_call(options)

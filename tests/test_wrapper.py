@@ -8,10 +8,9 @@ import glob
 import os
 import tempfile
 import unittest
-from bioformats.fasta import RandomSequence
-from bioformats.fasta import Writer
-from chromosomer.wrapper.blast import BlastN
-from chromosomer.wrapper.blast import MakeBlastDb
+
+from chromosomer.shims import FastaWriter, RandomSequence
+from chromosomer.wrapper.blast import BlastN, MakeBlastDb
 
 path = os.path.dirname(__file__)
 os.chdir(path)
@@ -22,11 +21,10 @@ class TestWrapperMakeBlastDb(unittest.TestCase):
         self.__fasta = tempfile.mkstemp()[1]
         self.__seq_length = 100
         self.__seq_number = 10
-        self.__dbname = os.path.join(
-            os.path.split(self.__fasta)[0], 'test')
+        self.__dbname = os.path.join(os.path.split(self.__fasta)[0], "test")
 
     def tearDown(self):
-        temp_files = glob.glob('{}*'.format(self.__dbname))
+        temp_files = glob.glob("{}*".format(self.__dbname))
         for i in temp_files:
             os.unlink(i)
 
@@ -34,11 +32,10 @@ class TestWrapperMakeBlastDb(unittest.TestCase):
         """
         The the makeblastdb launching routine.
         """
-        with Writer(self.__fasta) as fasta_writer:
-            for i in xrange(self.__seq_number):
+        with FastaWriter(self.__fasta) as fasta_writer:
+            for i in range(self.__seq_number):
                 seq_generator = RandomSequence(self.__seq_length)
-                fasta_writer.write('seq{}'.format(i+1),
-                                   seq_generator.get())
+                fasta_writer.write("seq{}".format(i + 1), seq_generator.get())
 
         wrapper = MakeBlastDb(self.__fasta, self.__dbname)
         wrapper.launch()
@@ -53,17 +50,16 @@ class TestWrapperBlastN(unittest.TestCase):
         self.__seq_length = 100
         self.__seq_number = 10
 
-        with Writer(self.__fasta) as fasta_writer:
-            for i in xrange(self.__seq_number):
+        with FastaWriter(self.__fasta) as fasta_writer:
+            for i in range(self.__seq_number):
                 seq_generator = RandomSequence(self.__seq_length)
-                fasta_writer.write('seq{}'.format(i+1),
-                                   seq_generator.get())
+                fasta_writer.write("seq{}".format(i + 1), seq_generator.get())
 
         wrapper = MakeBlastDb(self.__fasta)
         wrapper.launch()
 
     def tearDown(self):
-        temp_files = glob.glob('{}*'.format(self.__fasta))
+        temp_files = glob.glob("{}*".format(self.__fasta))
         for i in temp_files:
             os.unlink(i)
         if os.path.isfile(self.__output):
@@ -74,6 +70,6 @@ class TestWrapperBlastN(unittest.TestCase):
         Test the blastn testing routine.
         """
         wrapper = BlastN(self.__fasta, self.__fasta, self.__output)
-        wrapper.set('-outfmt', 6)
-        wrapper.get('-outfmt')
+        wrapper.set("-outfmt", 6)
+        wrapper.get("-outfmt")
         wrapper.launch()

@@ -4,9 +4,9 @@
 # Copyright (C) 2015 by Gaik Tamazian
 # gaik (dot) tamazian (at) gmail (dot) com
 
-import bioformats.bed
-import bioformats.gff3
+
 from chromosomer.fragment import Map
+from chromosomer.shims import BedRecord, Gff3Record
 
 
 class Transfer(object):
@@ -62,7 +62,7 @@ class Transfer(object):
             return None
 
         chrom = fr_record.ref_chr
-        if fr_record.fr_strand == '+':
+        if fr_record.fr_strand == "+":
             chrom_pos = fr_record.ref_start + pos
         else:
             chrom_pos = fr_record.ref_end - pos
@@ -74,14 +74,15 @@ class BedTransfer(Transfer):
     """
     Implements transferring routines for files in the BED format.
     """
-    def feature(self, bed_record):
+
+    def feature(self, bed_record: BedRecord):
         """
         Given a record from a BED file, return the transferred one.
 
         :param bed_record: a line from a BED file
-        :type bed_record: bioformats.bed.BedRecord
+        :type bed_record: BedRecord
         :return: a transferred feature
-        :rtype: bioformats.bed.BedRecord
+        :rtype: BedRecord
         """
         fr_record = self.find_fragment(bed_record.seq)
         if fr_record is None:
@@ -94,12 +95,12 @@ class BedTransfer(Transfer):
 
         # determine the transferred feature strand
         if bed_record.strand is not None:
-            feature_strand = -1 if bed_record.strand == '-' else 1
-            fragment_strand = -1 if bed_record.strand == '-' else 1
+            feature_strand = -1 if bed_record.strand == "-" else 1
+            fragment_strand = -1 if bed_record.strand == "-" else 1
             if feature_strand * fragment_strand == -1:
-                strand = '-'
+                strand = "-"
             else:
-                strand = '+'
+                strand = "+"
         else:
             strand = None
 
@@ -109,21 +110,22 @@ class BedTransfer(Transfer):
         transferred_record[2] = max(start, end)
         transferred_record[5] = strand
 
-        return bioformats.bed.Record(*transferred_record)
+        return BedRecord(*transferred_record)
 
 
 class Gff3Transfer(Transfer):
     """
     Implements transferring routines for files in the GFF3 format.
     """
-    def feature(self, gff3_record):
+
+    def feature(self, gff3_record: Gff3Record):
         """
         Given a record from a GFF3 file, return the transferred one.
 
         :param gff3_record: a line from a GFF3 file
-        :type gff3_record: bioformats.gff3.Gff3Record
+        :type gff3_record: Gff3Record
         :return: a transferred feature
-        :rtype: bioformats.bed.BedRecord
+        :rtype: BedRecord
         """
         fr_record = self.find_fragment(gff3_record.seqid)
         if fr_record is None:
@@ -131,20 +133,19 @@ class Gff3Transfer(Transfer):
             return None
 
         chrom = fr_record.ref_chr
-        start = self.coordinate(gff3_record.seqid,
-                                gff3_record.start - 1)[1]
+        start = self.coordinate(gff3_record.seqid, gff3_record.start - 1)[1]
         end = self.coordinate(gff3_record.seqid, gff3_record.end)[1]
 
         # determine the transferred feature strand
-        if gff3_record.strand != '.':
-            feature_strand = -1 if gff3_record.strand == '-' else 1
-            fragment_strand = -1 if gff3_record.strand == '-' else 1
+        if gff3_record.strand != ".":
+            feature_strand = -1 if gff3_record.strand == "-" else 1
+            fragment_strand = -1 if gff3_record.strand == "-" else 1
             if feature_strand * fragment_strand == -1:
-                strand = '-'
+                strand = "-"
             else:
-                strand = '+'
+                strand = "+"
         else:
-            strand = '.'
+            strand = "."
 
         transferred_record = list(gff3_record)
         transferred_record[0] = chrom
@@ -152,13 +153,14 @@ class Gff3Transfer(Transfer):
         transferred_record[4] = max(start, end)
         transferred_record[6] = strand
 
-        return bioformats.gff3.Record(*transferred_record)
+        return Gff3Record(*transferred_record)
 
 
 class VcfTransfer(Transfer):
     """
     Implements transferring routines for files in the VCF format.
     """
+
     def feature(self, vcf_record):
         """
         Given a record from a VCF file, return the transferred one.

@@ -4,27 +4,25 @@
 # Copyright (C) 2015 by Gaik Tamazian
 # gaik (dot) tamazian (at) gmail (dot) com
 
-import os
 import glob
 import logging
-import pyfaidx
+import os
 import random
-import string
 import tempfile
 import unittest
-from bioformats.bed import Reader
-from bioformats.blast import BlastTab
-from bioformats.fasta import RandomSequence
-from bioformats.fasta import Writer
-from chromosomer.fragment import AlignmentToMap
-from chromosomer.fragment import AlignmentToMapError
-from chromosomer.fragment import SeqLengths
-from chromosomer.fragment import Map
-from chromosomer.fragment import MapError
-from chromosomer.fragment import Simulator
-from chromosomer.wrapper.blast import BlastN
-from chromosomer.wrapper.blast import MakeBlastDb
-from itertools import izip
+
+import pyfaidx
+
+from chromosomer.fragment import (
+    AlignmentToMap,
+    AlignmentToMapError,
+    Map,
+    MapError,
+    SeqLengths,
+    Simulator,
+)
+from chromosomer.shims import BedReader, BlastTab, FastaWriter, RandomSequence
+from chromosomer.wrapper.blast import BlastN, MakeBlastDb
 
 path = os.path.dirname(__file__)
 os.chdir(path)
@@ -32,15 +30,11 @@ os.chdir(path)
 
 class TestFragmentMap(unittest.TestCase):
     def setUp(self):
-        self.__test_line = os.path.join(
-            'data', 'fragment_map', 'fragment_map_line.txt'
-        )
+        self.__test_line = os.path.join("data", "fragment_map", "fragment_map_line.txt")
         self.__incorrect_file_dir = os.path.join(
-            'data', 'fragment_map', 'incorrect_input'
+            "data", "fragment_map", "incorrect_input"
         )
-        self.__output_dir = os.path.join(
-            'data', 'fragment_map'
-        )
+        self.__output_dir = os.path.join("data", "fragment_map")
         self.__output_file = tempfile.NamedTemporaryFile().name
         self.__incorrect_files = os.listdir(self.__incorrect_file_dir)
         # silence the logging message
@@ -52,14 +46,14 @@ class TestFragmentMap(unittest.TestCase):
         """
         fragment_map = Map()
         new_record = Map.Record(
-            fr_name='fragment1',
+            fr_name="fragment1",
             fr_length=180,
             fr_start=0,
             fr_end=180,
-            fr_strand='+',
-            ref_chr='chr1',
+            fr_strand="+",
+            ref_chr="chr1",
             ref_start=5000,
-            ref_end=5180
+            ref_end=5180,
         )
         fragment_map.add_record(new_record)
 
@@ -69,21 +63,20 @@ class TestFragmentMap(unittest.TestCase):
         """
         fragment_map = Map()
         fragment_map.read(self.__test_line)
-        fragment = fragment_map.fragments('chr1').next()
-        self.assertEqual(fragment.fr_name, 'fragment1')
+        fragment = next(fragment_map.fragments("chr1"))
+        self.assertEqual(fragment.fr_name, "fragment1")
         self.assertEqual(fragment.fr_length, 180)
         self.assertEqual(fragment.fr_start, 0)
         self.assertEqual(fragment.fr_end, 180)
-        self.assertEqual(fragment.fr_strand, '+')
-        self.assertEqual(fragment.ref_chr, 'chr1')
+        self.assertEqual(fragment.fr_strand, "+")
+        self.assertEqual(fragment.ref_chr, "chr1")
         self.assertEqual(fragment.ref_start, 5000)
         self.assertEqual(fragment.ref_end, 5180)
 
         # check for incorrect input files
         for i in self.__incorrect_files:
             with self.assertRaises(MapError):
-                fragment_map.read(os.path.join(
-                    self.__incorrect_file_dir, i))
+                fragment_map.read(os.path.join(self.__incorrect_file_dir, i))
 
     def test_chromosomes(self):
         """
@@ -92,7 +85,7 @@ class TestFragmentMap(unittest.TestCase):
         fragment_map = Map()
         fragment_map.read(self.__test_line)
         chromosomes = list(fragment_map.chromosomes())
-        self.assertEqual(chromosomes, ['chr1'])
+        self.assertEqual(chromosomes, ["chr1"])
 
     def test_fragments(self):
         """
@@ -100,13 +93,13 @@ class TestFragmentMap(unittest.TestCase):
         """
         fragment_map = Map()
         fragment_map.read(self.__test_line)
-        fragments = list(fragment_map.fragments('chr1'))
+        fragments = list(fragment_map.fragments("chr1"))
         self.assertEqual(len(fragments), 1)
         self.assertIsInstance(fragments[0], Map.Record)
 
         # check if the missing chromosome is processed correctly
         with self.assertRaises(MapError):
-            list(fragment_map.fragments('chrN'))
+            list(fragment_map.fragments("chrN"))
 
     def test_summary(self):
         """
@@ -125,7 +118,7 @@ class TestFragmentMap(unittest.TestCase):
         fragment_map.convert2bed(self.__output_file)
         # try to read the produced BED file
         with open(self.__output_file) as bed_file:
-            reader = Reader(bed_file)
+            reader = BedReader(bed_file)
             for _ in reader.records():
                 pass
 
@@ -136,13 +129,14 @@ class TestFragmentMap(unittest.TestCase):
         fragment_map = Map()
         fragment_map.read(self.__test_line)
 
-        output_filename = os.path.join('data', 'fragment_map',
-                                       'fragment_map_output.txt')
+        output_filename = os.path.join(
+            "data", "fragment_map", "fragment_map_output.txt"
+        )
         fragment_map.write(output_filename)
 
         with open(output_filename) as output_file:
             with open(self.__test_line) as original_file:
-                for x, y in izip(original_file, output_file):
+                for x, y in zip(original_file, output_file):
                     self.assertEqual(x, y)
 
         os.unlink(output_filename)
@@ -153,67 +147,80 @@ class TestFragmentMap(unittest.TestCase):
         """
         # first, we form fragment and chromosome sequences
         fragments = {}
-        fragment_pattern = ['AC', 'AG', 'CT', 'CG', 'AT']
+        fragment_pattern = ["AC", "AG", "CT", "CG", "AT"]
         for i, pattern in enumerate(fragment_pattern):
-            fragments['fragment{}'.format(i+1)] = pattern * 5
+            fragments["fragment{}".format(i + 1)] = pattern * 5
         # a negative number indicated reverse orientation of a fragment
-        chromosome_content = {'chr1': [1, -2, 3], 'chr2': [-4, 5]}
+        chromosome_content = {"chr1": [1, -2, 3], "chr2": [-4, 5]}
         # get chromosome sequences
         chromosomes = {}
-        complement = string.maketrans('ATCGatcgNnXx', 'TAGCtagcNnXx')
+        complement = str.maketrans("ATCGatcgNnXx", "TAGCtagcNnXx")
         gap_size = 10
-        for i, chromosome_fragments in chromosome_content.iteritems():
+        for i, chromosome_fragments in chromosome_content.items():
             chromosomes[i] = []
             for j in chromosome_fragments:
-                fr_seq = fragments['fragment{}'.format(abs(j))]
+                fr_seq = fragments["fragment{}".format(abs(j))]
                 if j < 0:
-                    chromosomes[i].append(fr_seq[::-1].translate(
-                        complement))
+                    chromosomes[i].append(fr_seq[::-1].translate(complement))
                 else:
                     chromosomes[i].append(fr_seq)
-                chromosomes[i].append('N' * gap_size)
-            chromosomes[i] = ''.join(chromosomes[i])
+                chromosomes[i].append("N" * gap_size)
+            chromosomes[i] = "".join(chromosomes[i])
         # contruct a fragment __map
         fragment_map = Map()
-        for i, chromosome_fragments in chromosome_content.iteritems():
+        for i, chromosome_fragments in chromosome_content.items():
             current_start = 0
             for j in chromosome_fragments:
-                fr_name = 'fragment{}'.format(abs(j))
+                fr_name = "fragment{}".format(abs(j))
                 fr_length = 10
                 fr_start = 0
                 fr_end = fr_length
-                fr_strand = '+' if j > 0 else '-'
+                fr_strand = "+" if j > 0 else "-"
                 ref_chr = i
                 ref_start = current_start
                 ref_end = current_start + fr_length
-                fragment_map.add_record(Map.Record(
-                    fr_name, fr_length, fr_start, fr_end, fr_strand,
-                    ref_chr, ref_start, ref_end
-                ))
+                fragment_map.add_record(
+                    Map.Record(
+                        fr_name,
+                        fr_length,
+                        fr_start,
+                        fr_end,
+                        fr_strand,
+                        ref_chr,
+                        ref_start,
+                        ref_end,
+                    )
+                )
                 current_start += fr_length
                 # add the gap
-                fr_name = 'GAP'
+                fr_name = "GAP"
                 fr_length = gap_size
                 fr_start = 0
                 fr_end = gap_size
-                fr_strand = '+'
+                fr_strand = "+"
                 ref_chr = i
                 ref_start = current_start
                 ref_end = current_start + fr_end
-                fragment_map.add_record(Map.Record(
-                    fr_name, fr_length, fr_start, fr_end, fr_strand,
-                    ref_chr, ref_start, ref_end
-                ))
+                fragment_map.add_record(
+                    Map.Record(
+                        fr_name,
+                        fr_length,
+                        fr_start,
+                        fr_end,
+                        fr_strand,
+                        ref_chr,
+                        ref_start,
+                        ref_end,
+                    )
+                )
                 current_start += fr_length
 
-        output_chromosomes = os.path.join(self.__output_dir,
-                                          'temp_chromosomes.txt')
-        output_fragments = os.path.join(self.__output_dir,
-                                        'temp_fragments.txt')
+        output_chromosomes = os.path.join(self.__output_dir, "temp_chromosomes.txt")
+        output_fragments = os.path.join(self.__output_dir, "temp_fragments.txt")
 
         # write the fragment sequences to a FASTA file
-        with Writer(output_fragments) as writer:
-            for i, j in fragments.iteritems():
+        with FastaWriter(output_fragments) as writer:
+            for i, j in fragments.items():
                 writer.write(i, j)
 
         fragment_map.assemble(output_fragments, output_chromosomes)
@@ -221,28 +228,30 @@ class TestFragmentMap(unittest.TestCase):
         # read fragments from the written FASTA file and compare them
         # to the original ones
         assembled_chromosomes = pyfaidx.Fasta(output_chromosomes)
-        for i, seq in chromosomes.iteritems():
+        for i, seq in chromosomes.items():
             self.assertEqual(seq, assembled_chromosomes[i][:].seq)
 
         # try to use the fragment absent in the FASTA file of
         # fragment sequences
-        fragment_map.add_record(Map.Record(
-            fr_name='missing_fragment',
-            fr_length=0,
-            fr_start=0,
-            fr_end=0,
-            fr_strand='+',
-            ref_chr='chr3',
-            ref_start=0,
-            ref_end=0
-        ))
+        fragment_map.add_record(
+            Map.Record(
+                fr_name="missing_fragment",
+                fr_length=0,
+                fr_start=0,
+                fr_end=0,
+                fr_strand="+",
+                ref_chr="chr3",
+                ref_start=0,
+                ref_end=0,
+            )
+        )
         with self.assertRaises(MapError):
             fragment_map.assemble(output_fragments, output_chromosomes)
 
         os.unlink(output_chromosomes)
-        os.unlink(output_chromosomes + '.fai')
+        os.unlink(output_chromosomes + ".fai")
         os.unlink(output_fragments)
-        os.unlink(output_fragments + '.fai')
+        os.unlink(output_fragments + ".fai")
 
     def tearDown(self):
         if os.path.isfile(self.__output_file):
@@ -256,11 +265,10 @@ class TestFragmentLength(unittest.TestCase):
         self.__fasta_temp = tempfile.mkstemp()[1]
 
         # create a FASTA file of random sequences
-        with Writer(self.__fasta_temp) as fasta_writer:
+        with FastaWriter(self.__fasta_temp) as fasta_writer:
             seq_generator = RandomSequence(self.__fragment_length)
-            for i in xrange(self.__fragment_length):
-                fasta_writer.write('seq{}'.format(i+1),
-                                   seq_generator.get())
+            for i in range(self.__fragment_length):
+                fasta_writer.write("seq{}".format(i + 1), seq_generator.get())
 
     def test_lengths(self):
         """
@@ -268,7 +276,7 @@ class TestFragmentLength(unittest.TestCase):
         """
         x = SeqLengths(self.__fasta_temp)
         lengths = x.lengths()
-        for i in lengths.itervalues():
+        for i in lengths.values():
             self.assertEqual(i, self.__fragment_length)
 
     def tearDown(self):
@@ -283,11 +291,13 @@ class TestFragmentSimulator(unittest.TestCase):
         self.__unplaced_number = 2
         self.__gap_size = 5
 
-        self.__simulator = Simulator(self.__fragment_length,
-                                     self.__fragment_number,
-                                     self.__chromosome_number,
-                                     self.__unplaced_number,
-                                     self.__gap_size)
+        self.__simulator = Simulator(
+            self.__fragment_length,
+            self.__fragment_number,
+            self.__chromosome_number,
+            self.__unplaced_number,
+            self.__gap_size,
+        )
 
     def test_write(self):
         """
@@ -297,27 +307,26 @@ class TestFragmentSimulator(unittest.TestCase):
         self.__chromosomes = tempfile.mkstemp()[1]
         self.__map = tempfile.mkstemp()[1]
 
-        self.__simulator.write(self.__map, self.__fragments,
-                               self.__chromosomes)
+        self.__simulator.write(self.__map, self.__fragments, self.__chromosomes)
 
         # check if the correct number of fragment and chromosome
         # sequences was written
         fragment_fasta = pyfaidx.Fasta(self.__fragments)
-        self.assertEqual(len(fragment_fasta.keys()),
-                         self.__fragment_number +
-                         self.__unplaced_number)
+        self.assertEqual(
+            len(list(fragment_fasta.keys())),
+            self.__fragment_number + self.__unplaced_number,
+        )
         chromosome_fasta = pyfaidx.Fasta(self.__chromosomes)
-        self.assertEqual(len(chromosome_fasta.keys()),
-                         self.__chromosome_number)
+        self.assertEqual(len(list(chromosome_fasta.keys())), self.__chromosome_number)
 
         # check if a correct fragment map was written
         test_map = Map()
         test_map.read(self.__map)
 
         os.unlink(self.__fragments)
-        os.unlink(self.__fragments + '.fai')
+        os.unlink(self.__fragments + ".fai")
         os.unlink(self.__chromosomes)
-        os.unlink(self.__chromosomes + '.fai')
+        os.unlink(self.__chromosomes + ".fai")
         os.unlink(self.__map)
 
 
@@ -330,19 +339,22 @@ class TestFragmentAlignmentToMap(unittest.TestCase):
         self.__unplaced_number = 5
         self.__gap_size = 5
 
-        self.__simulator = Simulator(self.__fragment_length,
-                                     self.__fragment_number,
-                                     self.__chromosome_number,
-                                     self.__unplaced_number,
-                                     self.__gap_size)
+        self.__simulator = Simulator(
+            self.__fragment_length,
+            self.__fragment_number,
+            self.__chromosome_number,
+            self.__unplaced_number,
+            self.__gap_size,
+        )
 
         # create the corresponding files
         self.__map_file = tempfile.mkstemp()[1]
         self.__fragment_file = tempfile.mkstemp()[1]
         self.__chromosome_file = tempfile.mkstemp()[1]
 
-        self.__simulator.write(self.__map_file, self.__fragment_file,
-                               self.__chromosome_file)
+        self.__simulator.write(
+            self.__map_file, self.__fragment_file, self.__chromosome_file
+        )
 
         # create the chromosome sequence database and align the
         # fragments to it
@@ -350,11 +362,11 @@ class TestFragmentAlignmentToMap(unittest.TestCase):
         makeblastdb_wrapper.launch()
 
         self.__alignment_file = tempfile.mkstemp()[1]
-        blastn_wrapper = BlastN(self.__fragment_file,
-                                self.__chromosome_file,
-                                self.__alignment_file)
-        blastn_wrapper.set('-outfmt', 6)
-        blastn_wrapper.set('-dust', 'no')
+        blastn_wrapper = BlastN(
+            self.__fragment_file, self.__chromosome_file, self.__alignment_file
+        )
+        blastn_wrapper.set("-outfmt", 6)
+        blastn_wrapper.set("-dust", "no")
         blastn_wrapper.launch()
 
     def test_blast(self):
@@ -363,8 +375,7 @@ class TestFragmentAlignmentToMap(unittest.TestCase):
         construct a fragment map.
         """
         fragment_lengths = SeqLengths(self.__fragment_file)
-        map_creator = AlignmentToMap(self.__gap_size,
-                                     fragment_lengths.lengths())
+        map_creator = AlignmentToMap(self.__gap_size, fragment_lengths.lengths())
         with open(self.__alignment_file) as alignment_file:
             blast_alignments = BlastTab(alignment_file)
             new_map = map_creator.blast(blast_alignments, 1.2)[0]
@@ -373,8 +384,9 @@ class TestFragmentAlignmentToMap(unittest.TestCase):
 
             # compare the obtained fragment map with the original one
             for chromosome in orig_map.chromosomes():
-                for orig, new in izip(orig_map.fragments(chromosome),
-                                      new_map.fragments(chromosome)):
+                for orig, new in zip(
+                    orig_map.fragments(chromosome), new_map.fragments(chromosome)
+                ):
                     self.assertEqual(orig, new)
 
             # now test againt the situation when a fragment which length
@@ -383,9 +395,9 @@ class TestFragmentAlignmentToMap(unittest.TestCase):
             blast_alignments = BlastTab(alignment_file)
             incomplete_lengths = fragment_lengths.lengths()
             del incomplete_lengths[sorted(incomplete_lengths.keys())[0]]
-            map_creator = AlignmentToMap(self.__gap_size,
-                                         incomplete_lengths,
-                                         min_fragment_length=50)
+            map_creator = AlignmentToMap(
+                self.__gap_size, incomplete_lengths, min_fragment_length=50
+            )
             with self.assertRaises(AlignmentToMapError):
                 map_creator.blast(blast_alignments, 1.2)
 
@@ -395,13 +407,18 @@ class TestFragmentAlignmentToMap(unittest.TestCase):
         """
         test_map = Map()
         end = 0
-        for i in xrange(10):
-            for name in ('fr_{}'.format(i), 'GAP'):
+        for i in range(10):
+            for name in ("fr_{}".format(i), "GAP"):
                 fr_length = random.randrange(100)
                 new_record = Map.Record(
-                    name, fr_length, 0, fr_length,
-                    random.choice(('+', '-')), 'ref_1', end,
-                    end + fr_length
+                    name,
+                    fr_length,
+                    0,
+                    fr_length,
+                    random.choice(("+", "-")),
+                    "ref_1",
+                    end,
+                    end + fr_length,
                 )
                 end += fr_length
                 test_map.add_record(new_record)
@@ -412,20 +429,24 @@ class TestFragmentAlignmentToMap(unittest.TestCase):
         # check if gap sizes are of the specified value
         for i in test_map.chromosomes():
             for j in test_map.fragments(i):
-                if j.fr_name == 'GAP':
+                if j.fr_name == "GAP":
                     self.assertEqual(j.fr_length, gap_size)
                     self.assertEqual(j.fr_end - j.fr_start, gap_size)
-                    self.assertEqual(j.ref_end - j.ref_start,
-                                     gap_size)
+                    self.assertEqual(j.ref_end - j.ref_start, gap_size)
             # check that fragments are adjacent to each other
-            for j, k in zip(list(test_map.fragments(i))[:-1],
-                            list(test_map.fragments(i))[1:]):
+            for j, k in zip(
+                list(test_map.fragments(i))[:-1], list(test_map.fragments(i))[1:]
+            ):
                 self.assertEqual(j.ref_end, k.ref_start)
 
     def tearDown(self):
-        for i in (self.__map_file, self.__fragment_file,
-                  self.__chromosome_file, self.__alignment_file):
+        for i in (
+            self.__map_file,
+            self.__fragment_file,
+            self.__chromosome_file,
+            self.__alignment_file,
+        ):
             if os.path.isfile(i):
                 os.unlink(i)
-        for i in glob.glob('{}*'.format(self.__chromosome_file)):
+        for i in glob.glob("{}*".format(self.__chromosome_file)):
             os.unlink(i)
