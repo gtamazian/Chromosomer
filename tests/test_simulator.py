@@ -18,9 +18,20 @@ class TestFragmentSimulator(unittest.TestCase):
         os.mkdir(self.__output_dir)
 
     def test_simulator(self):
-        sys.argv = ['', 'simulator', '-g', '10', '-p', '5',
-                    '--prefix', 'test_', '20', '100', '5',
-                    self.__output_dir]
+        sys.argv = [
+            "",
+            "simulator",
+            "-g",
+            "10",
+            "-p",
+            "5",
+            "--prefix",
+            "test_",
+            "20",
+            "100",
+            "5",
+            self.__output_dir,
+        ]
         chromosomer.cli.chromosomer()
 
     def tearDown(self):
