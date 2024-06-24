@@ -63,9 +63,10 @@ class BlastTab:
         line_parts = self.__line_parts
 
         # check if the line contains the proper number of columns
-        if len(line_parts) != 12:
+        if len(line_parts) < 12:
             logging.error(
-                "line %d: the incorrect number of columns" % self.__reader.line_num
+                "line %d: the incorrect number of columns, expected at least 12 got %d"
+                % (self.__reader.line_num, len(line_parts))
             )
             raise Exception
 
@@ -95,7 +96,7 @@ class BlastTab:
                 )
                 raise Exception
 
-        return BlastTab.Alignment(*line_parts)
+        return BlastTab.Alignment(*line_parts[:12])
 
 
 def is_itemrgb(bed_field):

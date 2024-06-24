@@ -4,8 +4,9 @@
 # Copyright (C) 2015 by Gaik Tamazian
 # gaik (dot) tamazian (at) gmail (dot) com
 
+from setuptools import find_packages, setup
+
 import chromosomer
-from setuptools import setup, find_packages
 
 setup(
     name="chromosomer",
@@ -21,7 +22,7 @@ setup(
         "Intended Audience :: Science/Research",
         "Natural Language :: English",
         "Operating System :: Unix",
-        "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3",
         "Topic :: Scientific/Engineering :: Bio-Informatics",
     ],
     packages=find_packages(exclude=["doc", "tests*"]),
